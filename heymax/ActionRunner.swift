@@ -56,6 +56,10 @@ struct ActionRunner {
                     key code 36
                 end tell
             end tell
+            delay 1
+            tell application "Spotify"
+                play
+            end tell
             """
             DispatchQueue.global().async {
                 let proc = Process()
