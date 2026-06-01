@@ -37,46 +37,31 @@ struct ActionRunner {
             }
 
         case .playSpotify(let query):
-            let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-            DispatchQueue.global().async {
-                // Open search in Spotify app via URI
-                let open = Process()
-                open.launchPath = "/usr/bin/open"
-                open.arguments = ["-a", "Spotify", "spotify:search:\(encoded)"]
-                try? open.run()
-                open.waitUntilExit()
-                print("[Action] Opened Spotify search")
-
-                // Wait for results to load
-                Thread.sleep(forTimeInterval: 3.0)
-
-                // Use Spotify's native AppleScript to play (no Accessibility needed)
-                let play = Process()
-                let errPipe = Pipe()
-                play.launchPath = "/usr/bin/osascript"
-                play.standardError = errPipe
-                play.arguments = ["-e", """
-                    tell application "Spotify"
-                        activate
-                        delay 0.5
-                        play
-                        delay 1
-                        if player state is not playing then
-                            play
-                        end if
-                    end tell
-                """]
-                try? play.run()
-                play.waitUntilExit()
-
-                let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
-                if let err = String(data: errData, encoding: .utf8), !err.isEmpty {
-                    print("[Action] Spotify AppleScript error: \(err)")
+            Task {
+                // Search for the exact track via Spotify Web API
+                if let trackURI = await SpotifySearch.shared.searchTrack(query: query) {
+                    // Play the specific track via AppleScript
+                    let play = Process()
+                    play.launchPath = "/usr/bin/osascript"
+                    play.arguments = ["-e", """
+                        tell application "Spotify"
+                            activate
+                            play track "\(trackURI)"
+                        end tell
+                    """]
+                    try? play.run()
+                    play.waitUntilExit()
+                    print("[Action] Playing track: \(trackURI)")
                 } else {
-                    print("[Action] Spotify play command sent")
+                    // Fallback: open search in Spotify
+                    let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+                    let open = Process()
+                    open.launchPath = "/usr/bin/open"
+                    open.arguments = ["-a", "Spotify", "spotify:search:\(encoded)"]
+                    try? open.run()
+                    print("[Action] Fallback: opened Spotify search")
                 }
             }
-            print("[Action] Playing on Spotify: \(query)")
 
         case .setVolume(let level):
             let clamped = max(0, min(100, level))
