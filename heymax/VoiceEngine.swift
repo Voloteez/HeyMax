@@ -141,9 +141,11 @@ class VoiceEngine: NSObject, ObservableObject {
 
         print("[VoiceEngine] Processing command: \(command)")
 
-        // Capture screen + send to Claude
+        // Only capture screen if the command is about what's on screen
         Task {
-            let screenshot = await ScreenCapture.capture()
+            let screenKeywords = ["screen", "see", "look", "looking at", "what's this", "what is this", "read", "showing", "display"]
+            let needsScreen = screenKeywords.contains(where: { command.lowercased().contains($0) })
+            let screenshot = needsScreen ? await ScreenCapture.capture() : nil
             let response = await ClaudeAPI.shared.process(command: command, screenshot: screenshot)
 
             await MainActor.run {
