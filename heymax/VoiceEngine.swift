@@ -142,7 +142,7 @@ class VoiceEngine: NSObject, ObservableObject {
 
         // Capture screen + send to Claude
         Task {
-            let screenshot = ScreenCapture.capture()
+            let screenshot = await ScreenCapture.capture()
             let response = await ClaudeAPI.shared.process(command: command, screenshot: screenshot)
 
             await MainActor.run {
