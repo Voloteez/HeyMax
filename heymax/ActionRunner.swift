@@ -37,23 +37,32 @@ struct ActionRunner {
             }
 
         case .playSpotify(let query):
-            // Use Spotify URI to open directly in the app
-            let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-            if let uri = URL(string: "spotify:search:\(encoded)") {
-                NSWorkspace.shared.open(uri)
-            }
-            // Give Spotify a moment to load, then hit play
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                let script = """
-                tell application "Spotify"
-                    activate
-                    play
+            // Use AppleScript to search and play directly in Spotify
+            let escaped = query.replacingOccurrences(of: "\"", with: "\\\"")
+            let script = """
+            tell application "Spotify"
+                activate
+            end tell
+            delay 1
+            tell application "System Events"
+                tell process "Spotify"
+                    keystroke "l" using command down
+                    delay 0.3
+                    keystroke "a" using command down
+                    keystroke "\(escaped)"
+                    delay 0.5
+                    key code 36
+                    delay 1
+                    key code 36
                 end tell
-                """
+            end tell
+            """
+            DispatchQueue.global().async {
                 let proc = Process()
                 proc.launchPath = "/usr/bin/osascript"
                 proc.arguments = ["-e", script]
                 try? proc.run()
+                proc.waitUntilExit()
             }
             print("[Action] Playing on Spotify: \(query)")
 
