@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Cocoa
+import Combine
 
 enum OverlayState {
     case listening

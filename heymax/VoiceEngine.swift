@@ -8,6 +8,7 @@
 import Foundation
 import Speech
 import AVFoundation
+import Combine
 
 class VoiceEngine: NSObject, ObservableObject {
     static let shared = VoiceEngine()
