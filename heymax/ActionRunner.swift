@@ -47,9 +47,42 @@ struct ActionRunner {
 
         case .searchYouTube(let query):
             let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-            if let url = URL(string: "https://www.youtube.com/results?search_query=\(encoded)") {
+            let ytURL = "https://www.youtube.com/results?search_query=\(encoded)"
+            // Open the search page
+            if let url = URL(string: ytURL) {
                 NSWorkspace.shared.open(url)
-                print("[Action] YouTube search: \(query)")
+            }
+            // After page loads, click the first video result via JavaScript
+            DispatchQueue.global().async {
+                Thread.sleep(forTimeInterval: 3.0)
+                let js = "document.querySelector('ytd-video-renderer a#video-title, ytd-rich-item-renderer a#video-title-link').click();"
+                // Try Chrome first, then Safari
+                let chrome = Process()
+                let chromePipe = Pipe()
+                chrome.launchPath = "/usr/bin/osascript"
+                chrome.standardError = chromePipe
+                chrome.arguments = ["-e", """
+                    tell application "Google Chrome"
+                        execute front window's active tab javascript "\(js)"
+                    end tell
+                """]
+                try? chrome.run()
+                chrome.waitUntilExit()
+
+                let err = String(data: chromePipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                if !err.isEmpty {
+                    // Chrome didn't work, try Safari
+                    let safari = Process()
+                    safari.launchPath = "/usr/bin/osascript"
+                    safari.arguments = ["-e", """
+                        tell application "Safari"
+                            do JavaScript "\(js)" in current tab of front window
+                        end tell
+                    """]
+                    try? safari.run()
+                    safari.waitUntilExit()
+                }
+                print("[Action] YouTube auto-play triggered")
             }
 
         case .setVolume(let level):
