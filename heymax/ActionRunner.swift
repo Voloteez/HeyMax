@@ -39,33 +39,58 @@ struct ActionRunner {
         case .playSpotify(let query):
             let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
             DispatchQueue.global().async {
-                // Use open command to launch spotify URI — this always opens in the app
+                // Open search in Spotify
                 let open = Process()
                 open.launchPath = "/usr/bin/open"
                 open.arguments = ["-a", "Spotify", "spotify:search:\(encoded)"]
                 try? open.run()
                 open.waitUntilExit()
+                print("[Action] Opened Spotify search")
 
-                // Wait for search results to load, then play first result via Enter
-                Thread.sleep(forTimeInterval: 2.5)
+                Thread.sleep(forTimeInterval: 3.0)
 
-                let play = Process()
-                play.launchPath = "/usr/bin/osascript"
-                play.arguments = ["-e", """
+                // Get Spotify window position and click the green play button
+                let script = Process()
+                let pipe = Pipe()
+                script.launchPath = "/usr/bin/osascript"
+                script.standardOutput = pipe
+                script.arguments = ["-e", """
+                    tell application "Spotify" to activate
+                    delay 0.3
                     tell application "System Events"
                         tell process "Spotify"
-                            key code 36
-                        end tell
-                    end tell
-                    delay 1.5
-                    tell application "System Events"
-                        tell process "Spotify"
-                            key code 36
+                            set frontmost to true
+                            set winPos to position of window 1
+                            set winSize to size of window 1
+                            return (item 1 of winPos) & "," & (item 2 of winPos) & "," & (item 1 of winSize) & "," & (item 2 of winSize)
                         end tell
                     end tell
                 """]
-                try? play.run()
-                play.waitUntilExit()
+                try? script.run()
+                script.waitUntilExit()
+
+                let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let parts = output.components(separatedBy: ", ")
+
+                if parts.count == 4,
+                   let winX = Double(parts[0]),
+                   let winY = Double(parts[1]),
+                   let winW = Double(parts[2]) {
+                    // The green play button on the top result card
+                    let clickX = winX + winW * 0.62
+                    let clickY = winY + 230
+
+                    // Click using CGEvent
+                    let point = CGPoint(x: clickX, y: clickY)
+                    let mouseDown = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left)
+                    let mouseUp = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left)
+                    mouseDown?.post(tap: .cghidEventTap)
+                    Thread.sleep(forTimeInterval: 0.05)
+                    mouseUp?.post(tap: .cghidEventTap)
+                    print("[Action] Clicked play button at \(clickX), \(clickY)")
+                } else {
+                    print("[Action] Could not get Spotify window position: \(output)")
+                }
             }
             print("[Action] Playing on Spotify: \(query)")
 
