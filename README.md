@@ -111,8 +111,9 @@ Max never gives generic advice when it can see your actual situation. If there's
 | **Screenshot** | Only when asked | Always (for context) |
 | **Response length** | 1-2 sentences | 3-8 sentences, structured |
 | **Max tokens** | 256 | 1024 |
-| **Overlay** | Compact, 5s | Expanded + scrollable, 15s |
-| **Trigger** | Any command | "teach", "explain", "how does", etc. |
+| **Overlay** | Compact, 6s | Expanded + scrollable, 20s |
+| **Voice** | Speaks response | Speaks full explanation |
+| **Trigger** | Any command | "teach", "explain", "help me", "how does", etc. |
 
 ---
 
@@ -127,6 +128,19 @@ Max keeps the last 10 exchanges in memory. This means:
 
 ---
 
+## Text-to-Speech
+
+Max speaks every response out loud — like having a friend right next to you explaining things.
+
+- Uses **macOS built-in voices** — no API keys, no cost, works offline
+- Prefers premium voices (Zoe, Ava, Samantha) when available
+- **Toggle voice on/off** anytime from the menubar popover
+- Speaks short confirmations for actions, full explanations for teaching
+
+**Better voices:** Go to **System Settings → Accessibility → Spoken Content → System Voice → Manage Voices** and download **Zoe** or **Ava** (Premium). They sound way more natural than the defaults.
+
+---
+
 ## Architecture
 
 ```
@@ -136,7 +150,8 @@ ClaudeAPI.swift       → Smart routing (Haiku/Sonnet), conversation memory, tea
 ScreenCapture.swift   → ScreenCaptureKit-based screen capture (only when needed)
 ActionRunner.swift    → Executes actions: open URLs, launch apps, AppleScript, YouTube, Spotify
 OverlayWindow.swift   → Floating overlay UI — compact for actions, expanded for teaching
-MenubarView.swift     → Popover UI with start/stop and last command display
+SpeechOutput.swift    → Text-to-speech using AVSpeechSynthesizer with premium voice selection
+MenubarView.swift     → Popover UI with start/stop, voice toggle, and last command display
 ```
 
 ### Smart Routing
@@ -186,6 +201,7 @@ macOS will ask for:
 - **Speech framework** — on-device speech recognition with wake word detection
 - **ScreenCaptureKit** — screen capture for visual analysis and teaching context
 - **Claude API** — Haiku for fast actions, Sonnet for teaching and vision
+- **AVSpeechSynthesizer** — built-in macOS text-to-speech with premium voice support
 - **AppleScript** — deep system automation (volume, dark mode, app control, anything)
 - **Conversation memory** — 10-exchange rolling history for natural follow-ups
 
@@ -204,9 +220,10 @@ macOS will ask for:
 - [x] Conversation memory (follow-up questions)
 - [x] Teaching mode (detailed explanations, screen context)
 - [x] Expandable overlay for long responses
+- [x] Text-to-speech (Max talks back with premium macOS voices)
+- [x] Voice on/off toggle in menubar
 - [ ] Custom wake word
 - [ ] Keyboard shortcut trigger
-- [ ] Text-to-speech (Max talks back)
 - [ ] Plugin system for custom actions
 - [ ] Spotify direct playback
 - [ ] Persistent settings (auto-start, always listening)
