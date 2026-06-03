@@ -53,19 +53,42 @@ No dock icon. No window. Just a menubar icon that's always ready.
 > "Hey Max, what's wrong with this code?"
 > "Hey Max, read what's showing"
 
-### Teach me anything (NEW)
-> "Hey Max, teach me about async await in Swift"
-> "Hey Max, explain how APIs work"
-> "Hey Max, what's the difference between let and var?"
-> "Hey Max, walk me through setting up a server"
-> "Hey Max, how does this code work?" *(captures your screen)*
+### Help me with literally anything (NEW)
+
+Max sees your screen and can help with whatever's on it:
+
+**Code & Programming**
+> "Hey Max, what's wrong with this code?"
+> "Hey Max, explain this function"
+> "Hey Max, help me fix this bug"
+> "Hey Max, teach me about async await"
+
+**Math & Homework**
+> "Hey Max, solve this equation"
+> "Hey Max, help me with this problem"
+> "Hey Max, is this answer correct?"
+
+**Creative Apps (Lightroom, Figma, Photoshop, etc.)**
+> "Hey Max, how do I remove the background in this photo?"
+> "Hey Max, I'm lost in Lightroom, help me"
+> "Hey Max, what tool should I use for this?"
+
+**Terminal & DevOps**
+> "Hey Max, help me set up my terminal"
+> "Hey Max, what does this command do?"
+> "Hey Max, how do I SSH into a server?"
+
+**Any App**
+> "Hey Max, I'm stuck, what should I do?"
+> "Hey Max, where do I find settings in this app?"
+> "Hey Max, walk me through this"
 
 ### Have a conversation (NEW)
 Max remembers recent messages — ask follow-ups naturally:
 > "Hey Max, what is a closure?"
 > *"Hey Max, give me an example"*
 > *"Hey Max, explain that last part again"*
-> *"Hey Max, go deeper on that"*
+> *"Hey Max, now help me with the next step"*
 
 ### Run AppleScript (anything)
 Max can run any AppleScript command, which means it can control virtually any app on your Mac.
@@ -77,8 +100,10 @@ Max can run any AppleScript command, which means it can control virtually any ap
 ### Action Mode (default)
 For quick commands — open apps, play music, set volume, open URLs. Uses **Claude Haiku** for speed. No screenshot captured. Responses are 1-2 sentences. Overlay auto-hides after 5 seconds.
 
-### Teach Mode
-Activates when you say "teach me", "explain", "how does X work", "what is X", etc. Uses **Claude Sonnet** for depth. Always captures your screen so Max can reference what you're looking at. Gives structured, detailed explanations. Overlay expands with scrollable content, shows a brain icon, and stays visible for 15 seconds.
+### Teach / Help Mode
+Activates when you ask for help, want to learn, or are confused about anything. Uses **Claude Sonnet** for depth. Always captures your screen so Max can reference the **specific things you're looking at** — the exact code, the exact UI, the exact problem. Overlay expands with scrollable content, shows a brain icon, and stays visible for 15 seconds.
+
+Max never gives generic advice when it can see your actual situation. If there's a bug on screen, it points to the exact line. If you're in Lightroom, it tells you exactly which slider to drag.
 
 | | Action Mode | Teach Mode |
 |---|---|---|
