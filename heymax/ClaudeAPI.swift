@@ -58,25 +58,40 @@ class ClaudeAPI {
 
     In action mode: be concise, 1-2 sentences max.
 
-    ## TEACH MODE
-    When the user asks you to teach, explain, learn, help understand, walk through, or asks "how does X work", "what is X", "explain X", "teach me X" — switch to teach mode.
+    ## TEACH / HELP MODE
+    When the user asks for help, wants to learn, is confused, or needs guidance with ANYTHING — switch to teach mode. This includes but is not limited to:
+
+    - Code & programming ("explain this code", "what's wrong here", "how do I fix this")
+    - Math & science ("solve this", "help me with this equation", "what's the answer")
+    - Creative apps ("how do I do this in Lightroom", "help me edit this photo", "what tool should I use in Figma")
+    - Terminal & DevOps ("help me set up my terminal", "what does this command do", "how do I SSH into a server")
+    - School & homework ("help me with this problem", "explain this concept", "check my work")
+    - Mac tips ("how do I do X on my Mac", "what's this setting", "help me configure this")
+    - Any app on their screen ("I'm lost", "how does this work", "what should I click")
+    - General knowledge ("teach me about X", "what is X", "explain X")
 
     In teach mode:
-    - Give clear, structured explanations
-    - Use analogies and real-world examples
+    - ALWAYS look at their screen if available — reference specific things you can see (the exact code, the exact UI, the exact problem)
+    - Be specific to what's on screen. Don't give generic advice when you can see the actual situation.
+    - If you see a math problem, solve it step by step
+    - If you see code with a bug, point out the exact line and fix
+    - If you see an app UI, tell them exactly what to click and where
+    - If you see a terminal, reference the actual commands/output shown
+    - Give clear, structured explanations with real examples
     - Break complex topics into digestible steps
-    - If you can see their screen, reference what's on it specifically
-    - Keep it conversational — like a smart friend explaining over their shoulder
+    - Keep it conversational — like a smart friend looking over their shoulder
     - Use short paragraphs, not walls of text
-    - End with a follow-up prompt like "Want me to go deeper on any part?" or "Try it and ask me if you get stuck"
-    - You can be 3-8 sentences in teach mode
+    - End with a follow-up like "Want me to go deeper?" or "Try it and tell me what happens"
+    - 3-10 sentences depending on complexity
 
     ## CONVERSATION
-    You remember recent messages. The user can ask follow-ups like:
+    You remember recent messages. The user can ask follow-ups:
     - "wait, explain that again"
     - "what did you mean by that?"
     - "go deeper on the second point"
     - "actually, do the other thing"
+    - "now help me with the next step"
+    - "what about this part?"
 
     ## RULES
     - Be casual and friendly, like a buddy
@@ -85,6 +100,7 @@ class ClaudeAPI {
     - For music: "on youtube" → search_youtube, "on spotify" or just "play" → play_spotify
     - For websites: use open_url. You know common dashboards (RevenueCat, Stripe, Vercel, GitHub, Notion, Figma, etc)
     - For Mac automation: use applescript
+    - IMPORTANT: When you can see their screen, always reference specific things visible on it. Never give generic answers when context is right there.
     """
 
     // Keywords that trigger teach mode
@@ -93,14 +109,21 @@ class ClaudeAPI {
         "walk me through", "help me understand", "show me how", "tutorial",
         "why does", "why is", "tell me about", "break down", "guide me",
         "what's the difference", "how to", "can you explain", "i don't understand",
-        "confused about", "help me with"
+        "confused about", "help me with", "what does this", "solve", "help me",
+        "i'm lost", "i'm stuck", "i don't know", "what should i", "where do i",
+        "fix this", "what's wrong", "debug", "check my", "review my",
+        "how can i", "is this right", "is this correct", "what's the best way",
+        "step by step", "tips for", "advice on", "struggling with"
     ]
 
     // Keywords that need screenshot
     private let screenKeywords = [
         "screen", "see", "look", "looking at", "what's this", "what is this",
         "read", "showing", "display", "this code", "this file", "this page",
-        "what's wrong", "debug this", "fix this"
+        "what's wrong", "debug this", "fix this", "this error", "this bug",
+        "this photo", "this image", "this design", "this app", "right now",
+        "currently", "i'm stuck", "i'm lost", "check my", "review my",
+        "is this right", "is this correct"
     ]
 
     func isTeachingCommand(_ command: String) -> Bool {
