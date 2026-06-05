@@ -141,6 +141,9 @@ class VoiceEngine: NSObject, ObservableObject {
 
         print("[VoiceEngine] Processing command: \(command)")
 
+        // Cancel any in-flight API request
+        ClaudeAPI.shared.cancelCurrentRequest()
+
         Task {
             let needsScreen = ClaudeAPI.shared.needsScreenshot(command: command)
             let screenshot = needsScreen ? await ScreenCapture.capture() : nil
@@ -167,6 +170,19 @@ class VoiceEngine: NSObject, ObservableObject {
                 self.stopAndRestart()
             }
         }
+    }
+
+    // MARK: - Manual Trigger (from hotkey)
+
+    func triggerManually() {
+        guard isListening else { return }
+        DispatchQueue.main.async {
+            self.wakeWordDetected = true
+            self.commandBuffer = ""
+            print("[VoiceEngine] Manual trigger (hotkey)")
+            OverlayWindow.shared?.show(state: .listening)
+        }
+        resetSilenceTimer()
     }
 
     // MARK: - Stop / Restart

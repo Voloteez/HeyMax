@@ -2,15 +2,19 @@
 //  ClaudeAPI.swift
 //  heymax
 //
-//  Sends voice commands + optional screenshot to Claude for processing.
-//  Supports conversation memory for follow-ups and a teaching mode.
+//  Claude API client with smart routing, conversation memory,
+//  retry logic, request cancellation, system context, and safety.
 
 import Foundation
+import AppKit
 
 struct ClaudeResponse {
     let text: String
     let action: AppAction?
     let isTeaching: Bool
+    let model: String
+    let inputTokens: Int
+    let outputTokens: Int
 }
 
 enum AppAction {
@@ -26,15 +30,22 @@ enum AppAction {
 class ClaudeAPI {
     static let shared = ClaudeAPI()
 
-    // Set your Claude API key: https://console.anthropic.com/
+    // MARK: - Config
+
     private let apiKey = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] ?? ""
     private let fastModel = "claude-haiku-4-5-20251001"
-    private let smartModel = "claude-sonnet-4-20250514"
+    private let smartModel = "claude-sonnet-4-6-20250514"
     private let endpoint = "https://api.anthropic.com/v1/messages"
+    private let apiVersion = "2023-06-01"
 
-    // Conversation memory — keeps last 10 exchanges
+    // MARK: - State
+
     private var conversationHistory: [[String: Any]] = []
-    private let maxHistory = 20 // 10 user + 10 assistant messages
+    private let maxHistory = 20
+    private var currentTask: Task<ClaudeResponse, Never>?
+    private let maxInputLength = 2000 // Safety: cap voice input length
+
+    // MARK: - System Prompt
 
     private let systemPrompt = """
     You are Max, a helpful AI assistant that lives on the user's Mac. You can see their screen and hear their voice commands.
@@ -59,7 +70,7 @@ class ClaudeAPI {
     In action mode: be concise, 1-2 sentences max.
 
     ## TEACH / HELP MODE
-    When the user asks for help, wants to learn, is confused, or needs guidance with ANYTHING — switch to teach mode. This includes but is not limited to:
+    When the user asks for help, wants to learn, is confused, or needs guidance with ANYTHING — switch to teach mode. This includes:
 
     - Code & programming ("explain this code", "what's wrong here", "how do I fix this")
     - Math & science ("solve this", "help me with this equation", "what's the answer")
@@ -71,39 +82,35 @@ class ClaudeAPI {
     - General knowledge ("teach me about X", "what is X", "explain X")
 
     In teach mode:
-    - ALWAYS look at their screen if available — reference specific things you can see (the exact code, the exact UI, the exact problem)
-    - Be specific to what's on screen. Don't give generic advice when you can see the actual situation.
+    - ALWAYS look at their screen if available — reference specific things you can see
+    - Be specific. Don't give generic advice when you can see the actual situation.
     - If you see a math problem, solve it step by step
     - If you see code with a bug, point out the exact line and fix
-    - If you see an app UI, tell them exactly what to click and where
-    - If you see a terminal, reference the actual commands/output shown
-    - Give clear, structured explanations with real examples
-    - Break complex topics into digestible steps
-    - Keep it conversational — like a smart friend looking over their shoulder
-    - Use short paragraphs, not walls of text
-    - End with a follow-up like "Want me to go deeper?" or "Try it and tell me what happens"
+    - If you see an app UI, tell them exactly what to click
+    - Give clear, structured explanations
+    - Keep it conversational — like a smart friend over their shoulder
     - 3-10 sentences depending on complexity
+    - End with a follow-up like "Want me to go deeper?" or "Try it and tell me what happens"
+
+    ## CONTEXT
+    You receive system context with the current time, active app, and OS version. Use this to give better answers — e.g. if they're in Xcode, you know they're coding. If it's late at night, keep it brief.
 
     ## CONVERSATION
-    You remember recent messages. The user can ask follow-ups:
-    - "wait, explain that again"
-    - "what did you mean by that?"
-    - "go deeper on the second point"
-    - "actually, do the other thing"
-    - "now help me with the next step"
-    - "what about this part?"
+    You remember recent messages. Follow-ups work naturally.
 
     ## RULES
     - Be casual and friendly, like a buddy
     - If you can't do something, say so
     - Only include ###ACTION for actual actions, not teaching
     - For music: "on youtube" → search_youtube, "on spotify" or just "play" → play_spotify
-    - For websites: use open_url. You know common dashboards (RevenueCat, Stripe, Vercel, GitHub, Notion, Figma, etc)
+    - For websites: use open_url with the correct URL
     - For Mac automation: use applescript
-    - IMPORTANT: When you can see their screen, always reference specific things visible on it. Never give generic answers when context is right there.
+    - NEVER include sensitive info (passwords, keys) in responses
+    - When you can see their screen, always reference specific things visible on it
     """
 
-    // Keywords that trigger teach mode
+    // MARK: - Keyword Detection
+
     private let teachKeywords = [
         "teach", "explain", "learn", "how does", "how do", "what is", "what are",
         "walk me through", "help me understand", "show me how", "tutorial",
@@ -116,7 +123,6 @@ class ClaudeAPI {
         "step by step", "tips for", "advice on", "struggling with"
     ]
 
-    // Keywords that need screenshot
     private let screenKeywords = [
         "screen", "see", "look", "looking at", "what's this", "what is this",
         "read", "showing", "display", "this code", "this file", "this page",
@@ -126,6 +132,8 @@ class ClaudeAPI {
         "is this right", "is this correct"
     ]
 
+    // MARK: - Public API
+
     func isTeachingCommand(_ command: String) -> Bool {
         let lower = command.lowercased()
         return teachKeywords.contains(where: { lower.contains($0) })
@@ -133,18 +141,44 @@ class ClaudeAPI {
 
     func needsScreenshot(command: String) -> Bool {
         let lower = command.lowercased()
-        let isTeaching = isTeachingCommand(command)
-        let mentionsScreen = screenKeywords.contains(where: { lower.contains($0) })
-        // Always capture screen in teach mode (context helps) or when explicitly asked
-        return isTeaching || mentionsScreen
+        return isTeachingCommand(command) || screenKeywords.contains(where: { lower.contains($0) })
     }
 
+    /// Cancel any in-flight request
+    func cancelCurrentRequest() {
+        currentTask?.cancel()
+        currentTask = nil
+    }
+
+    /// Process a voice command with optional screenshot
     func process(command: String, screenshot: String?) async -> ClaudeResponse {
+        // Cancel previous request if still running
+        cancelCurrentRequest()
+
+        // Safety: sanitize and cap input length
+        let sanitized = sanitizeInput(command)
+
+        let task = Task { () -> ClaudeResponse in
+            await self.executeRequest(command: sanitized, screenshot: screenshot)
+        }
+        currentTask = task
+        return await task.value
+    }
+
+    func clearHistory() {
+        conversationHistory.removeAll()
+    }
+
+    // MARK: - Internal
+
+    private func executeRequest(command: String, screenshot: String?, retryCount: Int = 0) async -> ClaudeResponse {
         let isTeaching = isTeachingCommand(command)
-        let useScreenshot = screenshot != nil
-        // Use smart model for teaching or screen analysis, fast model for actions
-        let model = (isTeaching || useScreenshot) ? smartModel : fastModel
+        let hasScreenshot = screenshot != nil
+        let model = (isTeaching || hasScreenshot) ? smartModel : fastModel
         let maxTokens = isTeaching ? 1024 : 256
+
+        // Build system prompt with live context
+        let fullSystemPrompt = systemPrompt + "\n\n## CURRENT CONTEXT\n" + getSystemContext()
 
         // Build current message content
         var currentContent: [[String: Any]] = []
@@ -165,19 +199,18 @@ class ClaudeAPI {
             "text": command
         ])
 
-        // Build messages array with history
         var messages = conversationHistory
         messages.append(["role": "user", "content": currentContent])
 
         let body: [String: Any] = [
             "model": model,
             "max_tokens": maxTokens,
-            "system": systemPrompt,
+            "system": fullSystemPrompt,
             "messages": messages
         ]
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
-            return ClaudeResponse(text: "Failed to build request.", action: nil, isTeaching: false)
+            return errorResponse("Failed to build request.")
         }
 
         var request = URLRequest(url: URL(string: endpoint)!)
@@ -185,42 +218,126 @@ class ClaudeAPI {
         request.httpBody = jsonData
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        request.setValue(apiVersion, forHTTPHeaderField: "anthropic-version")
         request.timeoutInterval = isTeaching ? 30 : 15
 
         do {
-            let (data, _) = try await URLSession.shared.data(for: request)
+            // Check for cancellation before network call
+            try Task.checkCancellation()
+
+            let (data, httpResponse) = try await URLSession.shared.data(for: request)
+
+            // Handle HTTP errors with retry
+            if let http = httpResponse as? HTTPURLResponse {
+                if http.statusCode == 429 || http.statusCode >= 500 {
+                    if retryCount < 2 {
+                        let delay = Double(retryCount + 1) * 1.5
+                        print("[ClaudeAPI] Retrying in \(delay)s (attempt \(retryCount + 1), status \(http.statusCode))")
+                        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                        return await executeRequest(command: command, screenshot: screenshot, retryCount: retryCount + 1)
+                    }
+                    return errorResponse("API is busy. Try again in a moment.")
+                }
+
+                if http.statusCode == 401 {
+                    return errorResponse("Invalid API key. Check ANTHROPIC_API_KEY in Xcode scheme.")
+                }
+            }
 
             guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let contentArr = json["content"] as? [[String: Any]],
                   let firstBlock = contentArr.first,
                   let responseText = firstBlock["text"] as? String else {
-                return ClaudeResponse(text: "Couldn't understand the response.", action: nil, isTeaching: false)
+
+                // Try to extract error message
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let error = json["error"] as? [String: Any],
+                   let message = error["message"] as? String {
+                    print("[ClaudeAPI] API error: \(message)")
+                    return errorResponse("API error: \(message)")
+                }
+                return errorResponse("Couldn't parse the response.")
             }
 
-            let action = parseAction(from: responseText)
-            let cleanText = responseText.components(separatedBy: "###ACTION:").first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? responseText
+            // Extract usage stats
+            let usage = json["usage"] as? [String: Any]
+            let inputTokens = usage?["input_tokens"] as? Int ?? 0
+            let outputTokens = usage?["output_tokens"] as? Int ?? 0
 
-            // Save to conversation history (without image data to save memory)
+            let action = parseAction(from: responseText)
+            let cleanText = sanitizeOutput(
+                responseText.components(separatedBy: "###ACTION:").first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? responseText
+            )
+
+            // Save to history (text only, no images)
             conversationHistory.append(["role": "user", "content": command])
             conversationHistory.append(["role": "assistant", "content": responseText])
-
-            // Trim history if too long
             while conversationHistory.count > maxHistory {
                 conversationHistory.removeFirst(2)
             }
 
-            return ClaudeResponse(text: cleanText, action: action, isTeaching: isTeaching)
+            print("[ClaudeAPI] \(model) | \(inputTokens)→\(outputTokens) tokens | teaching=\(isTeaching)")
 
+            return ClaudeResponse(
+                text: cleanText,
+                action: action,
+                isTeaching: isTeaching,
+                model: model,
+                inputTokens: inputTokens,
+                outputTokens: outputTokens
+            )
+
+        } catch is CancellationError {
+            print("[ClaudeAPI] Request cancelled")
+            return errorResponse("Cancelled.")
         } catch {
-            print("[ClaudeAPI] Error: \(error)")
-            return ClaudeResponse(text: "Something went wrong: \(error.localizedDescription)", action: nil, isTeaching: false)
+            // Retry on network errors
+            if retryCount < 2 {
+                let delay = Double(retryCount + 1) * 1.0
+                print("[ClaudeAPI] Network error, retrying in \(delay)s: \(error.localizedDescription)")
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                return await executeRequest(command: command, screenshot: screenshot, retryCount: retryCount + 1)
+            }
+            print("[ClaudeAPI] Error after retries: \(error)")
+            return errorResponse("Network error. Check your connection.")
         }
     }
 
-    func clearHistory() {
-        conversationHistory.removeAll()
+    // MARK: - System Context
+
+    private func getSystemContext() -> String {
+        let date = DateFormatter.localizedString(from: Date(), dateStyle: .full, timeStyle: .short)
+        let frontApp = NSWorkspace.shared.frontmostApplication?.localizedName ?? "Unknown"
+        let os = ProcessInfo.processInfo.operatingSystemVersionString
+        return """
+        - Current time: \(date)
+        - Active app: \(frontApp)
+        - macOS version: \(os)
+        """
     }
+
+    // MARK: - Safety
+
+    private func sanitizeInput(_ input: String) -> String {
+        var cleaned = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned.count > maxInputLength {
+            cleaned = String(cleaned.prefix(maxInputLength))
+        }
+        return cleaned
+    }
+
+    private func sanitizeOutput(_ output: String) -> String {
+        // Strip any accidental markdown code fences that might confuse TTS
+        var cleaned = output
+        cleaned = cleaned.replacingOccurrences(of: "```", with: "")
+        return cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func errorResponse(_ message: String) -> ClaudeResponse {
+        ClaudeResponse(text: message, action: nil, isTeaching: false, model: "", inputTokens: 0, outputTokens: 0)
+    }
+
+    // MARK: - Action Parsing
 
     private func parseAction(from text: String) -> AppAction? {
         guard let range = text.range(of: "###ACTION:") else { return nil }

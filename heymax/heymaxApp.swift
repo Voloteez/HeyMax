@@ -3,8 +3,10 @@
 //  heymax
 //
 //  Menubar-only macOS app. No dock icon, no main window.
+//  Global hotkey: Option+Space to trigger listening.
 
 import SwiftUI
+import Carbon.HIToolbox
 
 @main
 struct heymaxApp: App {
@@ -22,6 +24,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var popover: NSPopover!
     var voiceEngine: VoiceEngine!
     var overlayWindow: OverlayWindow?
+    var hotKeyRef: EventHotKeyRef?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Hide dock icon
@@ -47,6 +50,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Overlay
         overlayWindow = OverlayWindow()
+
+        // Register global hotkey: Option + Space
+        registerHotKey()
     }
 
     @objc func togglePopover() {
@@ -56,5 +62,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
+    }
+
+    // MARK: - Global Hotkey (Option + Space)
+
+    private func registerHotKey() {
+        var hotKeyID = EventHotKeyID()
+        hotKeyID.signature = OSType(0x484D5858) // "HMXX"
+        hotKeyID.id = 1
+
+        let modifiers: UInt32 = UInt32(optionKey)
+        let keyCode: UInt32 = 49 // Space
+
+        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+
+        // Install handler
+        let handler: EventHandlerUPP = { _, event, _ -> OSStatus in
+            DispatchQueue.main.async {
+                let voice = VoiceEngine.shared
+                if voice.isListening {
+                    // Simulate wake word — go straight to listening for command
+                    voice.triggerManually()
+                } else {
+                    // Start listening first, then trigger
+                    voice.requestPermissions { granted in
+                        if granted {
+                            voice.startListening()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                voice.triggerManually()
+                            }
+                        }
+                    }
+                }
+            }
+            return noErr
+        }
+
+        InstallEventHandler(GetApplicationEventTarget(), handler, 1, &eventType, nil, nil)
+        RegisterEventHotKey(keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
+        print("[HeyMax] Global hotkey registered: Option+Space")
     }
 }
