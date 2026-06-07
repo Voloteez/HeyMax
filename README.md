@@ -286,14 +286,43 @@ macOS will ask for:
 - [x] Request cancellation (new command cancels old)
 - [x] Input/output safety (length limits, sanitization)
 - [x] Token usage tracking and logging
-- [ ] Custom wake word
-- [ ] Streaming responses (word by word)
-- [ ] Plugin system for custom actions
-- [ ] Spotify direct playback
-- [ ] Persistent settings (auto-start, always listening)
-- [ ] Menu bar animation while processing
-- [ ] Multi-monitor support
-- [ ] Clipboard awareness (teach about copied code)
+### Up Next
+- [ ] Streaming responses — text appears word by word in overlay as Claude generates
+- [ ] Clipboard awareness — "Hey Max, explain what I just copied"
+- [ ] Persistent settings — auto-start on login, always listening, preferred voice
+- [ ] Menu bar animation — waveform animates while processing
+- [ ] Custom wake word — change "Hey Max" to anything you want
+
+### Short-Term
+- [ ] Spotify direct playback via Spotify Connect API
+- [ ] Multi-monitor support — overlay follows active screen
+- [ ] Chat history panel — browse past conversations in the popover
+- [ ] Markdown rendering in overlay — code blocks, bold, lists
+- [ ] Sound effects — subtle audio cues for wake word detected, response ready
+- [ ] Drag-to-resize overlay — adjust teaching panel size
+- [ ] Copy response button — one-click copy from overlay
+- [ ] Pin overlay — keep teaching response visible while you work
+
+### Medium-Term
+- [ ] Plugin system — custom actions via JSON/Swift config files
+- [ ] Shortcuts integration — trigger Apple Shortcuts from voice
+- [ ] Calendar awareness — "What's my next meeting?" via EventKit
+- [ ] File awareness — "Hey Max, summarize this PDF" (drag & drop or reference by name)
+- [ ] Multi-language voice — detect and respond in French, Spanish, etc.
+- [ ] ElevenLabs TTS option — premium voice quality for power users
+- [ ] Local LLM fallback — Ollama/llama.cpp when offline (no API needed)
+- [ ] Notification actions — "Read my latest Slack message", "What did I miss?"
+
+### Long-Term Vision
+- [ ] Always-on ambient mode — Max listens passively, offers help proactively ("I noticed an error on your screen")
+- [ ] Workflow recording — "Hey Max, watch what I do and remember it" → replayable macros
+- [ ] Screen region selection — highlight a portion of screen to ask about
+- [ ] Multi-app orchestration — "Move this Figma design into a new Notion page"
+- [ ] Voice cloning — Max sounds like you (or anyone you choose)
+- [ ] iOS companion app — continue conversations from your phone
+- [ ] Team mode — shared knowledge base for dev teams ("How does our auth flow work?")
+- [ ] MCP integration — connect to any tool via Model Context Protocol
+- [ ] App Store release — signed, notarized, auto-update via Sparkle
 
 ---
 
