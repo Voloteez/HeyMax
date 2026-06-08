@@ -314,6 +314,7 @@ macOS will ask for:
 - [ ] ElevenLabs TTS option — premium voice quality for power users
 - [ ] Local LLM fallback — Ollama/llama.cpp when offline (no API needed)
 - [ ] Notification actions — "Read my latest Slack message", "What did I miss?"
+- [ ] System diagnostics — "Hey Max, why is my Mac slow?" → checks CPU, RAM, disk, running processes
 
 ### Long-Term Vision
 - [ ] Always-on ambient mode — Max listens passively, offers help proactively ("I noticed an error on your screen")
