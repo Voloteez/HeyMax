@@ -321,6 +321,7 @@ macOS will ask for:
 - [ ] ElevenLabs TTS option — premium voice quality for power users
 - [ ] Local LLM fallback — Ollama/llama.cpp when offline (no API needed)
 - [ ] Notification actions — "Read my latest Slack message", "What did I miss?"
+- [ ] Email compose — "Hey Max, draft an email to John about the meeting tomorrow" → opens Mail with draft
 - [ ] System diagnostics — "Hey Max, why is my Mac slow?" → checks CPU, RAM, disk, running processes
 - [ ] Git awareness — "Hey Max, what branch am I on?" / "commit with message fix auth bug" / "show me the diff"
 
