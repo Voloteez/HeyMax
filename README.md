@@ -310,6 +310,7 @@ macOS will ask for:
 - [ ] Shortcuts integration — trigger Apple Shortcuts from voice
 - [ ] Calendar awareness — "What's my next meeting?" via EventKit
 - [ ] File awareness — "Hey Max, summarize this PDF" (drag & drop or reference by name)
+- [ ] Natural language file search — "Hey Max, find that PDF I downloaded yesterday" via Spotlight API
 - [ ] Multi-language voice — detect and respond in French, Spanish, etc.
 - [ ] ElevenLabs TTS option — premium voice quality for power users
 - [ ] Local LLM fallback — Ollama/llama.cpp when offline (no API needed)
