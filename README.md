@@ -328,6 +328,7 @@ macOS will ask for:
 - [ ] Workflow recording — "Hey Max, watch what I do and remember it" → replayable macros
 - [ ] Screen region selection — highlight a portion of screen to ask about
 - [ ] Screenshot annotation — Max circles/arrows the thing it's talking about on your screen
+- [ ] Persistent memory — Max remembers things across restarts: "Hey Max, remember my server IP is 192.168.1.50"
 - [ ] Context switching — "Hey Max, switch to coding mode" → opens Xcode + Terminal, closes Slack + Discord
 - [ ] Multi-app orchestration — "Move this Figma design into a new Notion page"
 - [ ] Voice cloning — Max sounds like you (or anyone you choose)
