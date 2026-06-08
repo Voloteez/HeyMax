@@ -302,6 +302,7 @@ macOS will ask for:
 - [ ] Drag-to-resize overlay — adjust teaching panel size
 - [ ] Copy response button — one-click copy from overlay
 - [ ] Pin overlay — keep teaching response visible while you work
+- [ ] Window management — "Hey Max, put this window on the left half" / "make it fullscreen" / "tile these two apps"
 
 ### Medium-Term
 - [ ] Plugin system — custom actions via JSON/Swift config files
