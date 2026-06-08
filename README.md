@@ -324,6 +324,7 @@ macOS will ask for:
 - [ ] Email compose — "Hey Max, draft an email to John about the meeting tomorrow" → opens Mail with draft
 - [ ] System diagnostics — "Hey Max, why is my Mac slow?" → checks CPU, RAM, disk, running processes
 - [ ] Git awareness — "Hey Max, what branch am I on?" / "commit with message fix auth bug" / "show me the diff"
+- [ ] Developer REPL — "Hey Max, run this Python script" / "execute curl to my API" / "what's my localhost returning?"
 
 ### Long-Term Vision
 - [ ] Always-on ambient mode — Max listens passively, offers help proactively ("I noticed an error on your screen")
