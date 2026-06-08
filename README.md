@@ -315,6 +315,7 @@ macOS will ask for:
 - [ ] Local LLM fallback — Ollama/llama.cpp when offline (no API needed)
 - [ ] Notification actions — "Read my latest Slack message", "What did I miss?"
 - [ ] System diagnostics — "Hey Max, why is my Mac slow?" → checks CPU, RAM, disk, running processes
+- [ ] Git awareness — "Hey Max, what branch am I on?" / "commit with message fix auth bug" / "show me the diff"
 
 ### Long-Term Vision
 - [ ] Always-on ambient mode — Max listens passively, offers help proactively ("I noticed an error on your screen")
