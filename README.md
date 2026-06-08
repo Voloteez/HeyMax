@@ -310,6 +310,7 @@ macOS will ask for:
 ### Medium-Term
 - [ ] Plugin system — custom actions via JSON/Swift config files
 - [ ] Shortcuts integration — trigger Apple Shortcuts from voice
+- [ ] Focus mode — "Hey Max, block distractions for 30 minutes" → enables DND, hides social apps, starts timer
 - [ ] Calendar awareness — "What's my next meeting?" via EventKit
 - [ ] Daily briefing — "Hey Max, what's my day look like?" → calendar + weather + reminders + unread count
 - [ ] File awareness — "Hey Max, summarize this PDF" (drag & drop or reference by name)
